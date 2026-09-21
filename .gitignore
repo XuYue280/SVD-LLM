@@ -2,3 +2,12 @@
 cache/*
 **/__pycache__
 utils/c4-*
+# --- local single-GPU runner (run_local.sh) ---
+.venv-*/
+local/runs/
+local/logs/
+local/.spill/
+# scratch copies made while patching; never meant to be committed
+*.bak
+*.orig
+*.pre_fp16

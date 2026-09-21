@@ -12,8 +12,16 @@ sys.path.append(current_path)
 def get_calib_train_data(name, tokenizer, nsamples, seqlen=2048, seed=3, batch_size=1, dataset_cache_dir=None):
     import random
     random.seed(seed)
+    # The cached tensor holds TOKEN IDS, so it is only valid for the tokenizer
+    # that produced it -- but upstream keys the file on (name, nsamples, seqlen,
+    # seed, batch_size) only. Every OPT model shares the GPT-2 vocab so the reuse
+    # is invisible there, but Llama-3.1 has a disjoint 128k vocab: it would load
+    # OPT ids, stay in range, never raise, and compute whitening statistics from
+    # meaningless text. Key on the tokenizer identity too.
+    _tok_id = getattr(tokenizer, "name_or_path", "") or tokenizer.__class__.__name__
+    _tok_id = "".join(c if c.isalnum() or c in "-." else "_" for c in str(_tok_id))
     cache_file = (
-        f"cache/{name}_{nsamples}_{seqlen}_{seed}_{batch_size}.pt"
+        f"cache/{name}_{_tok_id}_{nsamples}_{seqlen}_{seed}_{batch_size}.pt"
     )
     nsamples += 1 #############################
     if not os.path.exists("cache"):
