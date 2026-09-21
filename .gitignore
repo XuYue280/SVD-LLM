@@ -11,3 +11,16 @@ local/.spill/
 *.bak
 *.orig
 *.pre_fp16
+
+# --- results & figures: must reach GitHub (double insurance vs. scp) ---
+# 'local/runs/' above excludes the DIRECTORY, so git never descends into it and a
+# bare '!local/runs/**/*.json' is a no-op. Re-include the dir, re-exclude its
+# contents, then negate only the files we want. All five lines are required.
+!local/runs/
+local/runs/**
+!local/runs/**/
+!local/runs/**/*.json
+!local/runs/**/*.csv
+# plots
+!figures/**/*.png
+!figures/**/*.pdf
