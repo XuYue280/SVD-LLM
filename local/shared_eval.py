@@ -319,6 +319,249 @@ def count_parameters(model):
     return {"total_params": int(total), "linear_params": int(linear)}
 
 
+# ARKS-compatible record fields.
+#
+# The acceptance test is mechanical: ARKS's own plot.py must be able to read the
+# file. Its contract (ARKS_plot/ARKS_and_Baseline_plot_space/plot.py):
+#   :30   perplexity from  compressed_eval.ppl.<corpus>.ppl
+#   :370  dense baseline from  dense_eval.ppl.<corpus>
+#   storage points from storage.total_model_storage_mb / storage.artifact_storage_mb
+#         and top-level dense_total_mb / dense_target_mb / dense_non_target_mb
+#   requested_compression_ratio is the x-axis key
+# Four record producers (ARKS + the three reference benches) already agree on
+# baseline/model/dtype/seed/device/gpu/package_versions/dense_eval/compressed_eval.
+#
+# This ADDS those keys; it never removes the ones run_local.sh's collect and the
+# existing 36 completed runs depend on.
+
+def _current_rss_bytes():
+    """Current RSS without a third-party dependency (ARKS
+    final1/ksubspaces_artifacts.py:134-142, transcribed)."""
+    try:
+        with open("/proc/self/statm", encoding="utf-8") as fh:
+            return int(fh.read().split()[1]) * os.sysconf("SC_PAGE_SIZE")
+    except (OSError, IndexError, ValueError):
+        import resource
+        peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        return int(peak * 1024 if peak < 10 ** 10 else peak)   # Linux KiB, macOS bytes
+
+
+class PeakMemory:
+    """Sampling RSS peak + CUDA peak, matching ARKS's bench records.
+
+    ARKS samples RSS on a background thread (ksubspaces_artifacts.py:110-131) and
+    reads the CUDA peaks from torch after a reset_peak_memory_stats at the start of
+    the scenario (bench_inference_minibatch_vq.py:805, :944, :949). Same here, so
+    peak_cpu_rss_mb / peak_cuda_allocated_mb mean the same thing on both sides.
+    """
+
+    def __init__(self, interval=0.5):
+        self.interval, self.start_rss = interval, _current_rss_bytes()
+        self.peak_rss = self.start_rss
+        self._stop, self._thread = None, None
+
+    def __enter__(self):
+        import threading
+        self._stop = threading.Event()
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.reset_peak_memory_stats()
+        except Exception:
+            pass
+
+        def sample():
+            while not self._stop.is_set():
+                self.peak_rss = max(self.peak_rss, _current_rss_bytes())
+                self._stop.wait(self.interval)
+
+        self._thread = threading.Thread(target=sample, daemon=True)
+        self._thread.start()
+        return self
+
+    def __exit__(self, *_):
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join()
+        self.peak_rss = max(self.peak_rss, _current_rss_bytes())
+
+    def fields(self):
+        cuda_alloc = cuda_res = None
+        try:
+            import torch
+            if torch.cuda.is_available():
+                cuda_alloc = torch.cuda.max_memory_allocated() / 1024 ** 2
+                cuda_res = torch.cuda.max_memory_reserved() / 1024 ** 2
+        except Exception:
+            pass
+        return {
+            "peak_cpu_rss_mb": self.peak_rss / 1024 ** 2,
+            "peak_cpu_rss_increase_mb": max(0, self.peak_rss - self.start_rss) / 1024 ** 2,
+            "peak_cuda_allocated_mb": cuda_alloc,
+            "peak_cuda_reserved_mb": cuda_res,
+        }
+
+
+ARKS_BASELINE_NAME = {"svdllm": "SVD-LLM", "asvd": "ASVD",
+                      "basis_sharing": "Basis_Sharing"}
+
+
+def _package_versions():
+    import sys as _sys
+    out = {"python": ".".join(str(x) for x in _sys.version_info[:3])}
+    for mod in ("torch", "transformers", "datasets", "accelerate", "lm_eval"):
+        try:
+            out[mod] = __import__(mod).__version__
+        except Exception:
+            out[mod] = None          # lm_eval is not installed by run_local.sh setup
+    return out
+
+
+def _gpu_name():
+    try:
+        import torch
+        if torch.cuda.is_available():
+            return torch.cuda.get_device_name(0)
+    except Exception:
+        pass
+    return None
+
+
+def load_dense_cache(runs_root):
+    """ARKS keeps one dense_eval per model and reuses it (dense_eval_cache.json).
+
+    Returns {corpus: {"ppl": float, "ppl_tokens": int}} or {}.
+    """
+    path = os.path.join(runs_root, "dense_eval_cache.json")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+    except Exception:
+        return {}
+
+
+def dense_cache_meta(dense_res):
+    """The `_meta` block save_dense_cache wrote (or {})."""
+    return (dense_res or {}).get("_meta") or {}
+
+
+def save_dense_cache(runs_root, res, inference_seconds=None):
+    """Persist the dense baseline once per model, ARKS-style.
+
+    `inference_seconds` is kept so a later compressed run can fill
+    `dense_inference_seconds` without re-evaluating the dense model.
+    """
+    path = os.path.join(runs_root, "dense_eval_cache.json")
+    os.makedirs(runs_root, exist_ok=True)
+    payload = {c: {"ppl": v["ppl"], "ppl_tokens": v["ppl_tokens"]}
+               for c, v in res.items()}
+    payload["_meta"] = {"dense_inference_seconds": inference_seconds}
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, indent=2)
+    return path
+
+
+def arks_fields(*, method, model, rho, res, params_before, params_after,
+                dense=False, seed=42, device="cuda", dense_res=None,
+                bytes_per_param=2, accuracy=None, extra=None,
+                timings=None, peak_memory=None,
+                layers_evaluated=None, matrices_evaluated=None):
+    """Build the ARKS-compatible half of a result record.
+
+    `res` is evaluate_all()'s output for THIS model; `dense_res` is the same for
+    the uncompressed model (from load_dense_cache), used to fill dense_eval and
+    the ppl_increase columns. Pass accuracy={} until lm_eval is installed -- the
+    key is emitted as None so the shape stays stable and the gap is visible.
+    """
+    import datetime
+    mb = lambda n: (n * bytes_per_param) / (1024.0 * 1024.0)
+    tot_b = params_before["total_params"]
+    tgt_b = params_before["linear_params"]
+    tot_a = params_after["total_params"]
+    tgt_a = params_after["linear_params"]
+
+    dense_res = {k: v for k, v in (dense_res or {}).items() if k != "_meta"} \
+        if dense_res else {}
+    ppl_block = {}
+    for corpus, v in res.items():
+        d = (dense_res or {}).get(corpus) or {}
+        dppl = d.get("ppl")
+        ppl_block[corpus] = {
+            "ppl": v["ppl"],
+            "tokens": v["ppl_tokens"],
+            "dense_ppl": dppl,
+            "ppl_increase": (v["ppl"] - dppl) if dppl else None,
+            "ppl_increase_percent": (100.0 * (v["ppl"] / dppl - 1.0)) if dppl else None,
+        }
+
+    out = {
+        "baseline": ARKS_BASELINE_NAME.get(method, method),
+        "model": model,
+        "dtype": "float16",
+        "seed": seed,
+        "device": device,
+        "gpu": _gpu_name(),
+        "package_versions": _package_versions(),
+        "last_updated": datetime.datetime.now().replace(microsecond=0).isoformat(),
+        "requested_compression_ratio": None if dense else rho,
+        "dense_eval": {
+            "ppl": {c: (v or {}).get("ppl") for c, v in (dense_res or {}).items()},
+            "accuracy": None,
+        },
+        "compressed_eval": {"ppl": ppl_block, "accuracy": accuracy},
+        "dense_target_parameter_count": tgt_b,
+        "dense_non_target_parameter_count": tot_b - tgt_b,
+        "dense_total_parameter_count": tot_b,
+        "compressed_target_parameter_count": tgt_a,
+        "compressed_total_parameter_count": tot_a,
+        "dense_target_mb": mb(tgt_b),
+        "dense_non_target_mb": mb(tot_b - tgt_b),
+        "dense_total_mb": mb(tot_b),
+        "compressed_target_mb": mb(tgt_a),
+        "compressed_total_mb": mb(tot_a),
+        # ARKS's bench record keeps these at TOP level
+        # (bench_inference_minibatch_vq.py:1061,1066,1068); plot.py instead reads the
+        # `storage` sub-dict. Emit both so either consumer works.
+        "artifact_storage_mb": mb(tgt_a),
+        "static_parameter_storage_mb": mb(tot_a - tgt_a),
+        "total_model_storage_mb": mb(tot_a),
+        "storage": {
+            "artifact_storage_mb": mb(tgt_a),
+            "static_parameter_storage_mb": mb(tot_a - tgt_a),
+            "total_model_storage_mb": mb(tot_a),
+        },
+        # --- the rest of ARKS's 45-key bench record that applies to a low-rank
+        # --- baseline (the other 20 keys are VQ/tile/codebook-specific).
+        # --- Formulas transcribed from final1/bench_inference_minibatch_vq.py.
+        "ppl": {c: v["ppl"] for c, v in res.items()},
+        "ppl_tokens": {c: v["ppl_tokens"] for c, v in res.items()},
+        "dense_ppl": {c: (dense_res or {}).get(c, {}).get("ppl") for c in res},
+        "dense_ppl_tokens": {c: (dense_res or {}).get(c, {}).get("ppl_tokens") for c in res},
+        "ppl_increase": {c: ppl_block[c]["ppl_increase"] for c in res},
+        "ppl_increase_percent": {c: ppl_block[c]["ppl_increase_percent"] for c in res},
+        "layers_evaluated": layers_evaluated,
+        "matrices_evaluated": matrices_evaluated,
+        # :1062 8.0 * artifact_bytes / max(compressed_parameter_count, 1)
+        "artifact_bits_per_compressed_parameter": (
+            8.0 * (tgt_a * bytes_per_param) / max(tgt_a, 1)),
+        # :1071 8.0 * (artifact_bytes + static_bytes) / max(total_parameter_count, 1)
+        "total_model_bits_per_parameter": (
+            8.0 * (tot_a * bytes_per_param) / max(tot_a, 1)),
+        "model_load_seconds": (timings or {}).get("model_load_seconds"),
+        "artifact_load_seconds": (timings or {}).get("artifact_load_seconds"),
+        "reconstruction_seconds": (timings or {}).get("reconstruction_seconds"),
+        "metric_seconds": (timings or {}).get("metric_seconds"),
+        "inference_seconds": (timings or {}).get("inference_seconds"),
+        "dense_inference_seconds": (timings or {}).get("dense_inference_seconds"),
+        "total_seconds": (timings or {}).get("total_seconds"),
+    }
+    if peak_memory:
+        out.update(peak_memory)
+    if extra:
+        out.update(extra)
+    return out
+
+
 def write_result(path, *, method, model, ratio, corpus, ppl, ppl_tokens,
                  dense_ppl=None, extra=None):
     """Append one row in the ARKS results schema (plus method/ratio columns)."""
