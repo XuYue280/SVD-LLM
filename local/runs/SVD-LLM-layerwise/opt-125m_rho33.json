@@ -1,0 +1,31 @@
+{
+  "whitening_degraded": [],
+  "method": "svdllm",
+  "model": "facebook/opt-125m",
+  "rho_target": 0.33,
+  "dense": false,
+  "seed": 42,
+  "calib_dataset": "wikitext2",
+  "whitening_nsamples": 256,
+  "params_before": {
+    "total_params": 125239296,
+    "linear_params": 123543552
+  },
+  "params_after": {
+    "total_params": 68210688,
+    "linear_params": 66514944
+  },
+  "realised_total_ratio": 0.5446428571428571,
+  "realised_linear_ratio": 0.5383926795305352,
+  "compress_seconds": 75.21061174501665,
+  "ppl": {
+    "wikitext2": 501.28857773702634,
+    "ptb": 3220.627974207767,
+    "c4": 1854.7303976453968
+  },
+  "ppl_tokens": {
+    "wikitext2": 286580,
+    "ptb": 96209,
+    "c4": 524032
+  }
+}

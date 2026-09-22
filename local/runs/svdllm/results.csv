@@ -1,4 +1,7 @@
 method,model,rho,dense,corpus,ppl,ppl_tokens,whitening_degraded_matrices,realised_linear_ratio,realised_total_ratio,compress_seconds,source
+svdllm,facebook/opt-125m,0.33,False,c4,1854.7303976453968,524032,0,0.5383926795305352,0.5446428571428571,75.27234970300924,/home/xuy280/Desktop/ICLR submission for ARKS/3 baseline/rehearsal/SVD-LLM/local/runs/svdllm/opt-125m_rho33.json
+svdllm,facebook/opt-125m,0.33,False,ptb,3220.627974207767,96209,0,0.5383926795305352,0.5446428571428571,75.27234970300924,/home/xuy280/Desktop/ICLR submission for ARKS/3 baseline/rehearsal/SVD-LLM/local/runs/svdllm/opt-125m_rho33.json
+svdllm,facebook/opt-125m,0.33,False,wikitext2,501.28857773702634,286580,0,0.5383926795305352,0.5446428571428571,75.27234970300924,/home/xuy280/Desktop/ICLR submission for ARKS/3 baseline/rehearsal/SVD-LLM/local/runs/svdllm/opt-125m_rho33.json
 svdllm,facebook/opt-125m,0.6,False,c4,165.2751645612904,524032,0,0.7242888402625821,0.728021978021978,85.26039573701564,/home/xuy280/Desktop/ICLR submission for ARKS/3 baseline/rehearsal/SVD-LLM/local/runs/svdllm/opt-125m_rho60.json
 svdllm,facebook/opt-125m,0.6,False,ptb,356.72150467514825,96209,0,0.7242888402625821,0.728021978021978,85.26039573701564,/home/xuy280/Desktop/ICLR submission for ARKS/3 baseline/rehearsal/SVD-LLM/local/runs/svdllm/opt-125m_rho60.json
 svdllm,facebook/opt-125m,0.6,False,wikitext2,71.9952325540032,286580,0,0.7242888402625821,0.728021978021978,85.26039573701564,/home/xuy280/Desktop/ICLR submission for ARKS/3 baseline/rehearsal/SVD-LLM/local/runs/svdllm/opt-125m_rho60.json
