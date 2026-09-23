@@ -499,9 +499,17 @@ def whitening(model_name, model, profiling_mat, ratio, dev):
                 # 1e-6 to the Cholesky FACTOR, whose diagonal reaches ~3e6 here --
                 # below one ulp, so the retry raises the identical error. Scale
                 # the ridge to the factor, and fall back to a pseudo-inverse.
+                # DEVICE DEVIATION (documented): the fallback chain below runs on CPU.
+                # cuSOLVER's float64 SVD/LU on these ill-conditioned Cholesky factors is
+                # pathologically slow -- measured >85 min for ONE pinv at n=8192 on an
+                # H100 vs 141.8 s on 26 CPU cores. Same LAPACK-family algorithm, same
+                # maths, different backend. Without it opt-6.7b/13b/30b (fc2 d_in
+                # 16384/20480/28672) cannot finish at all.
+                _fallback_dev = scaling_diag_matrix.device
+                scaling_diag_matrix = scaling_diag_matrix.cpu()
                 _scale = torch.diagonal(scaling_diag_matrix).abs().max().clamp(min=1.0)
                 _eye = torch.eye(scaling_diag_matrix.shape[0],
-                                 dtype=scaling_diag_matrix.dtype, device=dev)
+                                 dtype=scaling_diag_matrix.dtype, device=scaling_diag_matrix.device)
                 # Range extended past 1e-4: the Gram diagonals reach ~1e14 (bounded
                 # from ASVD's cached per-channel activation stats: opt-30b's worst
                 # channel is mean|x| = 2.08e4, so 524288 * 2.08e4^2 = 2.27e14 --
@@ -550,8 +558,10 @@ def whitening(model_name, model, profiling_mat, ratio, dev):
                     WHITENING_DEGRADED.append(f"{i}.{name}")
                     scaling_diag_matrix = torch.eye(
                         scaling_diag_matrix.shape[0],
-                        dtype=scaling_diag_matrix.dtype, device=dev)
+                        dtype=scaling_diag_matrix.dtype, device=scaling_diag_matrix.device)
                     scaling_matrix_inv = scaling_diag_matrix.clone()
+                scaling_diag_matrix = scaling_diag_matrix.to(_fallback_dev)
+                scaling_matrix_inv = scaling_matrix_inv.to(_fallback_dev)
                 del _eye
             scaling_diag_matrix = scaling_diag_matrix.float()
             scaling_matrix_inv = scaling_matrix_inv.float()
