@@ -1,0 +1,146 @@
+{
+  "whitening_degraded": [
+    "31.fc1",
+    "35.self_attn.k_proj",
+    "35.self_attn.v_proj",
+    "35.self_attn.q_proj",
+    "36.self_attn.k_proj",
+    "36.self_attn.v_proj",
+    "36.self_attn.q_proj",
+    "36.fc1",
+    "37.fc1",
+    "38.fc1",
+    "39.self_attn.k_proj",
+    "39.self_attn.v_proj",
+    "39.self_attn.q_proj"
+  ],
+  "method": "svdllm",
+  "model": "facebook/opt-13b",
+  "rho_target": 0.33,
+  "dense": false,
+  "seed": 42,
+  "calib_dataset": "wikitext2",
+  "whitening_nsamples": 256,
+  "params_before": {
+    "total_params": 12853473280,
+    "linear_params": 12840304640
+  },
+  "params_after": {
+    "total_params": 4420218880,
+    "linear_params": 4407050240
+  },
+  "realised_total_ratio": 0.3438929528003811,
+  "realised_linear_ratio": 0.34322006864784166,
+  "compress_seconds": 3189.020364901,
+  "ppl": {
+    "wikitext2": 33.02982182795814,
+    "ptb": 216.30968732996493,
+    "c4": 147.50062863658295
+  },
+  "ppl_tokens": {
+    "wikitext2": 286580,
+    "ptb": 96209,
+    "c4": 524032
+  },
+  "baseline": "SVD-LLM",
+  "dtype": "float16",
+  "device": "cuda",
+  "gpu": "NVIDIA H100 PCIe",
+  "package_versions": {
+    "python": "3.12.14",
+    "torch": "2.14.0+cu130",
+    "transformers": "4.45.2",
+    "datasets": "5.0.1",
+    "accelerate": "1.15.0",
+    "lm_eval": null
+  },
+  "last_updated": "2026-09-23T11:21:18",
+  "requested_compression_ratio": 0.33,
+  "dense_eval": {
+    "ppl": {
+      "wikitext2": 27.650160053501494,
+      "ptb": 38.983949773395956,
+      "c4": 26.559905976559055
+    },
+    "accuracy": null
+  },
+  "compressed_eval": {
+    "ppl": {
+      "wikitext2": {
+        "ppl": 33.02982182795814,
+        "tokens": 286580,
+        "dense_ppl": 27.650160053501494,
+        "ppl_increase": 5.379661774456643,
+        "ppl_increase_percent": 19.45616865886961
+      },
+      "ptb": {
+        "ppl": 216.30968732996493,
+        "tokens": 96209,
+        "dense_ppl": 38.983949773395956,
+        "ppl_increase": 177.32573755656898,
+        "ppl_increase_percent": 454.8685769074698
+      },
+      "c4": {
+        "ppl": 147.50062863658295,
+        "tokens": 524032,
+        "dense_ppl": 26.559905976559055,
+        "ppl_increase": 120.9407226600239,
+        "ppl_increase_percent": 455.35071836008154
+      }
+    },
+    "accuracy": null
+  },
+  "dense_target_parameter_count": 12840304640,
+  "dense_non_target_parameter_count": 13168640,
+  "dense_total_parameter_count": 12853473280,
+  "compressed_target_parameter_count": 4407050240,
+  "compressed_total_parameter_count": 4420218880,
+  "dense_target_mb": 24490.9375,
+  "dense_non_target_mb": 25.1171875,
+  "dense_total_mb": 24516.0546875,
+  "compressed_target_mb": 8405.78125,
+  "compressed_total_mb": 8430.8984375,
+  "artifact_storage_mb": 8405.78125,
+  "static_parameter_storage_mb": 25.1171875,
+  "total_model_storage_mb": 8430.8984375,
+  "storage": {
+    "artifact_storage_mb": 8405.78125,
+    "static_parameter_storage_mb": 25.1171875,
+    "total_model_storage_mb": 8430.8984375
+  },
+  "dense_ppl": {
+    "wikitext2": 27.650160053501494,
+    "ptb": 38.983949773395956,
+    "c4": 26.559905976559055
+  },
+  "dense_ppl_tokens": {
+    "wikitext2": 286580,
+    "ptb": 96209,
+    "c4": 524032
+  },
+  "ppl_increase": {
+    "wikitext2": 5.379661774456643,
+    "ptb": 177.32573755656898,
+    "c4": 120.9407226600239
+  },
+  "ppl_increase_percent": {
+    "wikitext2": 19.45616865886961,
+    "ptb": 454.8685769074698,
+    "c4": 455.35071836008154
+  },
+  "layers_evaluated": 40,
+  "matrices_evaluated": 480,
+  "artifact_bits_per_compressed_parameter": 16.0,
+  "total_model_bits_per_parameter": 16.0,
+  "model_load_seconds": 0.19317876500281272,
+  "artifact_load_seconds": 0.0,
+  "reconstruction_seconds": 3189.020364901,
+  "metric_seconds": 201.1736259419995,
+  "inference_seconds": 201.1736259419995,
+  "dense_inference_seconds": 42.14398808400006,
+  "total_seconds": 3390.4053213320003,
+  "peak_cpu_rss_mb": 62583.4765625,
+  "peak_cpu_rss_increase_mb": 12974.36328125,
+  "peak_cuda_allocated_mb": 39668.28369140625,
+  "peak_cuda_reserved_mb": 39696.0
+}
