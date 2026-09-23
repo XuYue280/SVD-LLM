@@ -1,0 +1,137 @@
+{
+  "whitening_degraded": [
+    "42.fc1",
+    "45.fc1",
+    "46.fc1",
+    "47.fc1"
+  ],
+  "method": "svdllm",
+  "model": "facebook/opt-30b",
+  "rho_target": 0.6,
+  "dense": false,
+  "seed": 42,
+  "calib_dataset": "wikitext2",
+  "whitening_nsamples": 256,
+  "params_before": {
+    "total_params": 29974540288,
+    "linear_params": 29955358720
+  },
+  "params_after": {
+    "total_params": 18133233664,
+    "linear_params": 18114052096
+  },
+  "realised_total_ratio": 0.6049545210626451,
+  "realised_linear_ratio": 0.6047015582526131,
+  "compress_seconds": 8136.888690029002,
+  "ppl": {
+    "wikitext2": 11.08094716310185,
+    "ptb": 17.92685053006758,
+    "c4": 15.371107623688433
+  },
+  "ppl_tokens": {
+    "wikitext2": 286580,
+    "ptb": 96209,
+    "c4": 524032
+  },
+  "baseline": "SVD-LLM",
+  "dtype": "float16",
+  "device": "cuda",
+  "gpu": "NVIDIA H100 PCIe",
+  "package_versions": {
+    "python": "3.12.14",
+    "torch": "2.14.0+cu130",
+    "transformers": "4.45.2",
+    "datasets": "5.0.1",
+    "accelerate": "1.15.0",
+    "lm_eval": null
+  },
+  "last_updated": "2026-09-23T13:44:13",
+  "requested_compression_ratio": 0.6,
+  "dense_eval": {
+    "ppl": {
+      "wikitext2": 27.650160053501494,
+      "ptb": 38.983949773395956,
+      "c4": 26.559905976559055
+    },
+    "accuracy": null
+  },
+  "compressed_eval": {
+    "ppl": {
+      "wikitext2": {
+        "ppl": 11.08094716310185,
+        "tokens": 286580,
+        "dense_ppl": 27.650160053501494,
+        "ppl_increase": -16.569212890399644,
+        "ppl_increase_percent": -59.92447370409124
+      },
+      "ptb": {
+        "ppl": 17.92685053006758,
+        "tokens": 96209,
+        "dense_ppl": 38.983949773395956,
+        "ppl_increase": -21.057099243328377,
+        "ppl_increase_percent": -54.01479164047789
+      },
+      "c4": {
+        "ppl": 15.371107623688433,
+        "tokens": 524032,
+        "dense_ppl": 26.559905976559055,
+        "ppl_increase": -11.188798352870622,
+        "ppl_increase_percent": -42.12664895254338
+      }
+    },
+    "accuracy": null
+  },
+  "dense_target_parameter_count": 29955358720,
+  "dense_non_target_parameter_count": 19181568,
+  "dense_total_parameter_count": 29974540288,
+  "compressed_target_parameter_count": 18114052096,
+  "compressed_total_parameter_count": 18133233664,
+  "dense_target_mb": 57135.3125,
+  "dense_non_target_mb": 36.5859375,
+  "dense_total_mb": 57171.8984375,
+  "compressed_target_mb": 34549.8125,
+  "compressed_total_mb": 34586.3984375,
+  "artifact_storage_mb": 34549.8125,
+  "static_parameter_storage_mb": 36.5859375,
+  "total_model_storage_mb": 34586.3984375,
+  "storage": {
+    "artifact_storage_mb": 34549.8125,
+    "static_parameter_storage_mb": 36.5859375,
+    "total_model_storage_mb": 34586.3984375
+  },
+  "dense_ppl": {
+    "wikitext2": 27.650160053501494,
+    "ptb": 38.983949773395956,
+    "c4": 26.559905976559055
+  },
+  "dense_ppl_tokens": {
+    "wikitext2": 286580,
+    "ptb": 96209,
+    "c4": 524032
+  },
+  "ppl_increase": {
+    "wikitext2": -16.569212890399644,
+    "ptb": -21.057099243328377,
+    "c4": -11.188798352870622
+  },
+  "ppl_increase_percent": {
+    "wikitext2": -59.92447370409124,
+    "ptb": -54.01479164047789,
+    "c4": -42.12664895254338
+  },
+  "layers_evaluated": 48,
+  "matrices_evaluated": 576,
+  "artifact_bits_per_compressed_parameter": 16.0,
+  "total_model_bits_per_parameter": 16.0,
+  "model_load_seconds": 0.19914237500051968,
+  "artifact_load_seconds": 0.0,
+  "reconstruction_seconds": 8136.888690029002,
+  "metric_seconds": 298.57238897299976,
+  "inference_seconds": 298.57238897299976,
+  "dense_inference_seconds": 42.14398808400006,
+  "total_seconds": 8435.685590103996,
+  "peak_cpu_rss_mb": 84463.75,
+  "peak_cpu_rss_increase_mb": 83149.5,
+  "peak_cuda_allocated_mb": 66268.28369140625,
+  "peak_cuda_reserved_mb": 66312.0
+}
